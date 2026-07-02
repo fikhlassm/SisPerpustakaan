@@ -1,7 +1,9 @@
 // =====================================================
 // Sistem Informasi Peminjaman Buku Perpustakaan Berbasis Web
-// Prisma schema (SQLite) — diturunkan dari CDM/PDM Bab 4 laporan APSI
+// Prisma schema (PostgreSQL) — diturunkan dari CDM/PDM Bab 4 laporan APSI
 // Adaptasi dari MySQL DDL pada dokumen Fase 1 (Ref: 1.3)
+//
+// Database: PostgreSQL (hosted via Supabase untuk production di Vercel)
 //
 // Penyesuaian skema (Ref: 1.2):
 //  1. Circular reference denda <-> detail_peminjaman diputus menjadi satu arah
@@ -14,7 +16,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

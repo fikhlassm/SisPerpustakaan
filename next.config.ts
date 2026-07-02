@@ -1,7 +1,8 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Standalone hanya untuk non-Vercel deployment (VPS/dedicated)
+  ...(process.env.VERCEL ? {} : { output: "standalone" }),
 
   // TypeScript build errors sekarang aktif — tidak ada yang lolos ke production
   typescript: {
