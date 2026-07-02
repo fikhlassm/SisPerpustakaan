@@ -1,19 +1,16 @@
 import { db } from "@/lib/db"
 import { createSession, hashPassword } from "@/lib/auth"
 import { apiHandler, fail, nextId, ok } from "@/lib/api"
+import { parseBody } from "@/lib/validate"
+import { RegisterSchema } from "@/lib/schemas"
 
 // POST /api/auth/register — Daftar Anggota baru (status default Nonaktif, perlu verifikasi admin)
 // Ref: Use Case Daftar, DFD 2.1
 export const POST = apiHandler(async (req) => {
-  const body = await req.json()
-  const { namaAnggota, jenisKelamin, alamat, noTelepon, email, password, tanggalLahir } = body
+  const { data, error } = await parseBody(req, RegisterSchema)
+  if (error) return error
 
-  if (!namaAnggota || !jenisKelamin || !email || !password) {
-    return fail("Nama, jenis kelamin, email, dan password wajib diisi", 422)
-  }
-  if (!["L", "P"].includes(jenisKelamin)) {
-    return fail("Jenis kelamin harus 'L' atau 'P'", 422)
-  }
+  const { namaAnggota, jenisKelamin, alamat, noTelepon, email, password, tanggalLahir } = data
 
   const exists = await db.anggota.findUnique({ where: { email } })
   if (exists) {

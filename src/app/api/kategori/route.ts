@@ -1,6 +1,8 @@
 import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/auth"
 import { apiHandler, fail, nextId, ok } from "@/lib/api"
+import { parseBody } from "@/lib/validate"
+import { CreateKategoriSchema } from "@/lib/schemas"
 
 // GET /api/kategori — daftar semua kategori (publik untuk anggota, admin juga)
 export const GET = apiHandler(async () => {
@@ -15,9 +17,10 @@ export const GET = apiHandler(async () => {
 // Ref: DFD 1.0, Use Case Kelola Data Buku (kategori)
 export const POST = apiHandler(async (req) => {
   await requireAdmin()
-  const body = await req.json()
-  const { namaKategori, deskripsi } = body
-  if (!namaKategori) return fail("Nama kategori wajib diisi", 422)
+
+  const { data, error } = await parseBody(req, CreateKategoriSchema)
+  if (error) return error
+  const { namaKategori, deskripsi } = data
 
   const idKategori = await nextId("kategori", "KTG")
   const kategori = await db.kategori.create({

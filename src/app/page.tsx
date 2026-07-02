@@ -7,9 +7,10 @@ import type { SessionUser } from "@/lib/types"
 import { AuthPage } from "@/components/auth/auth-page"
 import { AdminShell } from "@/components/admin/admin-shell"
 import { AnggotaShell } from "@/components/anggota/anggota-shell"
+import { ErrorBoundary } from "@/components/shared/error-boundary"
 import { Loader2, Library } from "lucide-react"
 
-export default function Home() {
+function AppContent() {
   const { user, loading, setUser, setLoading } = useApp()
 
   useEffect(() => {
@@ -46,4 +47,12 @@ export default function Home() {
   if (!user) return <AuthPage />
   if (user.role === "admin") return <AdminShell />
   return <AnggotaShell />
+}
+
+export default function Home() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  )
 }

@@ -1,6 +1,9 @@
 import { db } from "@/lib/db"
 import { requireAdmin, hashPassword } from "@/lib/auth"
 import { apiHandler, fail, nextId, ok } from "@/lib/api"
+import { parseBody } from "@/lib/validate"
+import { CreateAnggotaSchema } from "@/lib/schemas"
+import type { Prisma } from "@prisma/client"
 
 // GET /api/anggota — daftar anggota (admin only), dukung filter status
 // Ref: DFD 2.0, Use Case Kelola Data Anggota
@@ -10,7 +13,7 @@ export const GET = apiHandler(async (req) => {
   const status = searchParams.get("status") || undefined
   const q = searchParams.get("q")?.trim() || ""
 
-  const where: any = {}
+  const where: Prisma.AnggotaWhereInput = {}
   if (status) where.statusAnggota = status
   if (q) {
     where.OR = [
@@ -42,22 +45,10 @@ export const GET = apiHandler(async (req) => {
 // POST /api/anggota — admin tambah anggota langsung (status bisa langsung Aktif)
 export const POST = apiHandler(async (req) => {
   await requireAdmin()
-  const body = await req.json()
-  const {
-    namaAnggota,
-    jenisKelamin,
-    alamat,
-    noTelepon,
-    email,
-    password,
-    tanggalLahir,
-    statusAnggota,
-  } = body
 
-  if (!namaAnggota || !jenisKelamin || !email || !password) {
-    return fail("Nama, jenis kelamin, email, password wajib diisi", 422)
-  }
-  if (!["L", "P"].includes(jenisKelamin)) return fail("Jenis kelamin harus 'L' atau 'P'", 422)
+  const { data, error } = await parseBody(req, CreateAnggotaSchema)
+  if (error) return error
+  const { namaAnggota, jenisKelamin, alamat, noTelepon, email, password, tanggalLahir, statusAnggota } = data
 
   const exists = await db.anggota.findUnique({ where: { email } })
   if (exists) return fail("Email sudah terdaftar", 409)

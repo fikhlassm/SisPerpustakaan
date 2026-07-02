@@ -1,11 +1,11 @@
 import { db } from "@/lib/db"
 import { requireAdmin, requireAnggota } from "@/lib/auth"
-import { apiHandler, fail, ok } from "@/lib/api"
+import { apiHandler, fail, ok, type RouteContext } from "@/lib/api"
 
 // GET /api/peminjaman/[id] — detail peminjaman
 // Admin bisa lihat semua; anggota hanya miliknya sendiri
-export const GET = apiHandler(async (_req, ctx) => {
-  const id = (await ctx.params).id
+export const GET = apiHandler(async (_req, ctx?: RouteContext) => {
+  const id = (await ctx!.params).id
   const peminjaman = await db.peminjaman.findUnique({
     where: { idPeminjaman: id },
     include: {

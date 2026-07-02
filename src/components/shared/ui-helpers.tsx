@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { STATUS_BADGE_CLASSES, STATUS_BADGE_FALLBACK } from "@/lib/constants"
 import { LucideIcon } from "lucide-react"
 
 export function StatCard({
@@ -70,18 +71,13 @@ export function EmptyState({
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    Aktif: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-    Nonaktif: "bg-muted text-muted-foreground border-border",
-    Dipinjam: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-    Selesai: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-    Belum: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-    Sudah: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-    "Belum Bayar": "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-    "Sudah Bayar": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  }
   return (
-    <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border", map[status] || "bg-muted text-muted-foreground border-border")}>
+    <span
+      className={cn(
+        "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
+        STATUS_BADGE_CLASSES[status] ?? STATUS_BADGE_FALLBACK,
+      )}
+    >
       {status}
     </span>
   )

@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { api, ApiError, formatDate, formatRupiah, hariTerlambat } from "@/lib/api-client"
+import { useDebounce } from "@/hooks/use-debounce"
 import type { Peminjaman } from "@/lib/types"
 import { PageHeader } from "@/components/shared/shell-layout"
 import { EmptyState, StatusBadge } from "@/components/shared/ui-helpers"
@@ -39,18 +40,8 @@ export function PeminjamanView() {
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<StatusFilter>("Semua")
   const [search, setSearch] = useState("")
-  const [debounced, setDebounced] = useState("")
+  const debounced = useDebounce(search, 300)
   const [refresh, setRefresh] = useState(0)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Debounce search input 300ms
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setDebounced(search), 300)
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [search])
 
   useEffect(() => {
     let active = true

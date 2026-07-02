@@ -1,10 +1,12 @@
 import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/auth"
-import { apiHandler, fail, ok } from "@/lib/api"
+import { apiHandler, fail, ok, type RouteContext } from "@/lib/api"
+import { parseBody } from "@/lib/validate"
+import { UpdateBukuSchema } from "@/lib/schemas"
 
 // GET /api/buku/[id] — detail buku (Ref: Use Case Lihat Detail Buku)
-export const GET = apiHandler(async (_req, ctx) => {
-  const id = (await ctx.params).id
+export const GET = apiHandler(async (_req, ctx?: RouteContext) => {
+  const id = (await ctx!.params).id
   const buku = await db.buku.findUnique({
     where: { idBuku: id },
     include: { kategori: true, admin: { select: { namaAdmin: true } } },
@@ -14,11 +16,13 @@ export const GET = apiHandler(async (_req, ctx) => {
 })
 
 // PUT /api/buku/[id] — update buku (admin only)
-export const PUT = apiHandler(async (req, ctx) => {
+export const PUT = apiHandler(async (req, ctx?: RouteContext) => {
   await requireAdmin()
-  const id = (await ctx.params).id
-  const body = await req.json()
-  const { idKategori, judulBuku, pengarang, penerbit, tahunTerbit, stok } = body
+  const id = (await ctx!.params).id
+
+  const { data, error } = await parseBody(req, UpdateBukuSchema)
+  if (error) return error
+  const { idKategori, judulBuku, pengarang, penerbit, tahunTerbit, stok } = data
 
   const exists = await db.buku.findUnique({ where: { idBuku: id } })
   if (!exists) return fail("Buku tidak ditemukan", 404)
@@ -27,18 +31,16 @@ export const PUT = apiHandler(async (req, ctx) => {
     const kategori = await db.kategori.findUnique({ where: { idKategori } })
     if (!kategori) return fail("Kategori tidak ditemukan", 404)
   }
-  const stokNum = stok !== undefined ? Number(stok) : undefined
-  if (stokNum !== undefined && stokNum < 0) return fail("Stok tidak boleh negatif", 422)
 
   const updated = await db.buku.update({
     where: { idBuku: id },
     data: {
-      ...(idKategori ? { idKategori } : {}),
-      ...(judulBuku ? { judulBuku } : {}),
-      ...(pengarang ? { pengarang } : {}),
-      ...(penerbit ? { penerbit } : {}),
-      ...(tahunTerbit !== undefined ? { tahunTerbit: Number(tahunTerbit) } : {}),
-      ...(stokNum !== undefined ? { stok: stokNum } : {}),
+      ...(idKategori !== undefined ? { idKategori } : {}),
+      ...(judulBuku !== undefined ? { judulBuku } : {}),
+      ...(pengarang !== undefined ? { pengarang } : {}),
+      ...(penerbit !== undefined ? { penerbit } : {}),
+      ...(tahunTerbit !== undefined ? { tahunTerbit } : {}),
+      ...(stok !== undefined ? { stok } : {}),
     },
     include: { kategori: true },
   })
@@ -47,9 +49,9 @@ export const PUT = apiHandler(async (req, ctx) => {
 
 // DELETE /api/buku/[id] — hapus buku (admin only)
 // Ref: ON DELETE RESTRICT — tidak bisa hapus jika sedang dipinjam (ada detail_peminjaman)
-export const DELETE = apiHandler(async (_req, ctx) => {
+export const DELETE = apiHandler(async (_req, ctx?: RouteContext) => {
   await requireAdmin()
-  const id = (await ctx.params).id
+  const id = (await ctx!.params).id
   const exists = await db.buku.findUnique({
     where: { idBuku: id },
     include: { _count: { select: { detailPinjam: true } } },

@@ -13,16 +13,27 @@ export function fail(message: string, status = 400, details?: unknown) {
   return NextResponse.json({ error: message, details }, { status })
 }
 
-export function apiHandler(fn: (req: Request, ctx?: any) => Promise<NextResponse>) {
-  return async (req: Request, ctx?: any) => {
+// Tipe untuk context Next.js App Router (params, dll.)
+export type RouteContext = {
+  params: Promise<Record<string, string>>
+}
+
+// apiHandler — wrapper error handling untuk semua route.
+// Menangkap AuthError → 401, error lain → 500.
+// Dynamic routes ([id]) selalu mendapat ctx dari Next.js App Router.
+export function apiHandler(
+  fn: (req: Request, ctx?: RouteContext) => Promise<NextResponse>,
+) {
+  return async (req: Request, ctx?: RouteContext): Promise<NextResponse> => {
     try {
       return await fn(req, ctx)
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e instanceof AuthError) {
         return fail(e.message, e.status)
       }
       console.error("[API Error]", e)
-      return fail(e?.message || "Terjadi kesalahan server", 500)
+      const message = e instanceof Error ? e.message : "Terjadi kesalahan server"
+      return fail(message, 500)
     }
   }
 }
@@ -47,19 +58,31 @@ export async function nextId(
     maxNum = rows.reduce((m, r) => Math.max(m, parseInt(r.idAdmin.replace(prefix, "")) || 0), 0)
   } else if (model === "kategori") {
     const rows = await db.kategori.findMany({ select: { idKategori: true } })
-    maxNum = rows.reduce((m, r) => Math.max(m, parseInt(r.idKategori.replace(prefix, "")) || 0), 0)
+    maxNum = rows.reduce(
+      (m, r) => Math.max(m, parseInt(r.idKategori.replace(prefix, "")) || 0),
+      0,
+    )
   } else if (model === "anggota") {
     const rows = await db.anggota.findMany({ select: { idAnggota: true } })
-    maxNum = rows.reduce((m, r) => Math.max(m, parseInt(r.idAnggota.replace(prefix, "")) || 0), 0)
+    maxNum = rows.reduce(
+      (m, r) => Math.max(m, parseInt(r.idAnggota.replace(prefix, "")) || 0),
+      0,
+    )
   } else if (model === "buku") {
     const rows = await db.buku.findMany({ select: { idBuku: true } })
     maxNum = rows.reduce((m, r) => Math.max(m, parseInt(r.idBuku.replace(prefix, "")) || 0), 0)
   } else if (model === "peminjaman") {
     const rows = await db.peminjaman.findMany({ select: { idPeminjaman: true } })
-    maxNum = rows.reduce((m, r) => Math.max(m, parseInt(r.idPeminjaman.replace(prefix, "")) || 0), 0)
+    maxNum = rows.reduce(
+      (m, r) => Math.max(m, parseInt(r.idPeminjaman.replace(prefix, "")) || 0),
+      0,
+    )
   } else if (model === "detail") {
     const rows = await db.detailPeminjaman.findMany({ select: { idDetail: true } })
-    maxNum = rows.reduce((m, r) => Math.max(m, parseInt(r.idDetail.replace(prefix, "")) || 0), 0)
+    maxNum = rows.reduce(
+      (m, r) => Math.max(m, parseInt(r.idDetail.replace(prefix, "")) || 0),
+      0,
+    )
   }
   return genId(prefix, maxNum + 1, width)
 }

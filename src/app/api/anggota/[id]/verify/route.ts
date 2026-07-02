@@ -1,33 +1,26 @@
-import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/auth"
-import { apiHandler, fail, ok } from "@/lib/api"
+import { apiHandler, fail, ok, type RouteContext } from "@/lib/api"
+import { parseBody } from "@/lib/validate"
+import { VerifyAnggotaSchema } from "@/lib/schemas"
+import { verifyMember, MemberError } from "@/services/member-service"
 
 // PATCH /api/anggota/[id]/verify — verifikasi/aktivasi anggota (toggle Aktif/Nonaktif)
 // Ref: DFD 2.2 Verifikasi Anggota, Activity 6.2.11
-export const PATCH = apiHandler(async (req, ctx) => {
+//
+// Body opsional: { status?: "Aktif" | "Nonaktif" }
+// Jika tidak disertakan → toggle otomatis (via MemberService.verify)
+export const PATCH = apiHandler(async (req, ctx?: RouteContext) => {
   await requireAdmin()
-  const id = (await ctx.params).id
-  const body = await req.json().catch(() => ({}))
-  // Jika body menyediakan status, pakai itu; selain itu toggle
-  const exists = await db.anggota.findUnique({ where: { idAnggota: id } })
-  if (!exists) return fail("Anggota tidak ditemukan", 404)
+  const id = (await ctx!.params).id
 
-  const newStatus =
-    body.status === "Aktif" || body.status === "Nonaktif"
-      ? body.status
-      : exists.statusAnggota === "Aktif"
-        ? "Nonaktif"
-        : "Aktif"
+  const { data, error } = await parseBody(req, VerifyAnggotaSchema)
+  if (error) return error
 
-  const updated = await db.anggota.update({
-    where: { idAnggota: id },
-    data: { statusAnggota: newStatus },
-    select: {
-      idAnggota: true,
-      namaAnggota: true,
-      email: true,
-      statusAnggota: true,
-    },
-  })
-  return ok(updated)
+  try {
+    const updated = await verifyMember(id, data.status)
+    return ok(updated)
+  } catch (e) {
+    if (e instanceof MemberError) return fail(e.message, e.statusCode)
+    throw e
+  }
 })

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/auth"
 import { apiHandler, ok } from "@/lib/api"
+import type { Prisma } from "@prisma/client"
 
 // =====================================================
 // /api/laporan/anggota — Laporan Anggota (terpisah)
@@ -21,13 +22,12 @@ export const GET = apiHandler(async (req) => {
   const { searchParams } = new URL(req.url)
 
   const today = new Date()
-  const awalTahun = new Date(today.getFullYear(), 0, 1)
   const dari = searchParams.get("dari") ? new Date(searchParams.get("dari")!) : new Date(2000, 0, 1)
   const sampai = searchParams.get("sampai") ? new Date(searchParams.get("sampai")!) : today
   sampai.setHours(23, 59, 59, 999)
   const status = searchParams.get("status") || undefined
 
-  const where: any = {
+  const where: Prisma.AnggotaWhereInput = {
     tanggalDaftar: { gte: dari, lte: sampai },
   }
   if (status) where.statusAnggota = status

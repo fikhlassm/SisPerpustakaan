@@ -1,7 +1,7 @@
 import { db } from "@/lib/db"
 import { requireAnggota, requireAdmin } from "@/lib/auth"
 import { apiHandler, ok } from "@/lib/api"
-import { formatDate } from "@/lib/api-client"
+import { formatDate } from "@/lib/formatters"
 
 // =====================================================
 // /api/notifikasi — Notifikasi Jatuh Tempo & Denda
@@ -167,6 +167,16 @@ async function buildAnggotaNotifications(idAnggota: string): Promise<Notifikasi[
   return notifs
 }
 
+type AdminNotifItem = {
+  idAnggota: string
+  namaAnggota: string
+  idPeminjaman: string
+  jenis: string
+  judul: string
+  level: string
+  tanggalJatuhTempo: string
+}
+
 // =====================================================
 // Build ringkasan notifikasi untuk admin (dashboard)
 // =====================================================
@@ -175,15 +185,7 @@ async function buildAdminNotifications(): Promise<{
   peminjamanTerlambat: number
   mendekatiJatuhTempo: number
   dendaBelumBayar: number
-  items: Array<{
-    idAnggota: string
-    namaAnggota: string
-    idPeminjaman: string
-    jenis: string
-    judul: string
-    level: string
-    tanggalJatuhTempo: string
-  }>
+  items: AdminNotifItem[]
 }> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -197,7 +199,7 @@ async function buildAdminNotifications(): Promise<{
     },
   })
 
-  const items: Array<any> = []
+  const items: AdminNotifItem[] = []
   let terlambat = 0
   let mendekati = 0
 

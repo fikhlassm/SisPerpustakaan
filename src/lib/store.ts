@@ -23,15 +23,28 @@ type AppState = {
   setAnggotaView: (v: AnggotaView) => void
 }
 
-export const useApp = create<AppState>((set, get) => ({
+export const useApp = create<AppState>((set) => ({
   user: null,
   loading: true,
   setUser: (u) => set({ user: u }),
   setLoading: (b) => set({ loading: b }),
 
   logout: async () => {
-    await fetch("/api/auth/logout", { method: "POST" })
-    set({ user: null, adminView: "dashboard", anggotaView: "katalog" })
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST" })
+      if (!res.ok) {
+        // Server gagal menghapus sesi — tetap logout di client agar tidak stuck,
+        // tapi log error supaya bisa diinvestigasi
+        console.error("[logout] Server gagal menghapus sesi:", res.status)
+      }
+    } catch (err) {
+      // Network error — tetap logout di client (UX lebih penting daripada sesi
+      // server yang mungkin sudah kedaluwarsa sendiri setelah 7 hari)
+      console.error("[logout] Network error saat logout:", err)
+    } finally {
+      // Reset state client apapun yang terjadi di server
+      set({ user: null, adminView: "dashboard", anggotaView: "katalog" })
+    }
   },
 
   adminView: "dashboard",

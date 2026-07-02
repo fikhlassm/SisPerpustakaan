@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { api, ApiError } from "@/lib/api-client"
+import { useDebounce } from "@/hooks/use-debounce"
 import type { Buku, Kategori } from "@/lib/types"
 import { PageHeader } from "@/components/shared/shell-layout"
 import { EmptyState } from "@/components/shared/ui-helpers"
@@ -94,7 +95,7 @@ export function BukuView() {
 
   // Filter state
   const [q, setQ] = useState("")
-  const [debouncedQ, setDebouncedQ] = useState("")
+  const debouncedQ = useDebounce(q, 300)
   const [idKategoriFilter, setIdKategoriFilter] = useState<string>("all")
 
   // Create / Edit dialog
@@ -106,17 +107,6 @@ export function BukuView() {
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<Buku | null>(null)
   const [deleting, setDeleting] = useState(false)
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Debounce text search 300ms
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setDebouncedQ(q), 300)
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [q])
 
   const loadKategori = useCallback(async () => {
     setKatLoading(true)

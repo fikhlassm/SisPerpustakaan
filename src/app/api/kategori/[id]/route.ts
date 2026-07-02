@@ -1,14 +1,17 @@
 import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/auth"
-import { apiHandler, fail, ok } from "@/lib/api"
+import { apiHandler, fail, ok, type RouteContext } from "@/lib/api"
+import { parseBody } from "@/lib/validate"
+import { UpdateKategoriSchema } from "@/lib/schemas"
 
 // PUT /api/kategori/[id] — update kategori (admin only)
-export const PUT = apiHandler(async (req, ctx) => {
+export const PUT = apiHandler(async (req, ctx?: RouteContext) => {
   await requireAdmin()
-  const id = (await ctx.params).id
-  const body = await req.json()
-  const { namaKategori, deskripsi } = body
-  if (!namaKategori) return fail("Nama kategori wajib diisi", 422)
+  const id = (await ctx!.params).id
+
+  const { data, error } = await parseBody(req, UpdateKategoriSchema)
+  if (error) return error
+  const { namaKategori, deskripsi } = data
 
   const exists = await db.kategori.findUnique({ where: { idKategori: id } })
   if (!exists) return fail("Kategori tidak ditemukan", 404)
@@ -22,9 +25,9 @@ export const PUT = apiHandler(async (req, ctx) => {
 
 // DELETE /api/kategori/[id] — hapus kategori (admin only)
 // Ref: ON DELETE RESTRICT di DDL — tidak bisa hapus jika masih dipakai buku
-export const DELETE = apiHandler(async (_req, ctx) => {
+export const DELETE = apiHandler(async (_req, ctx?: RouteContext) => {
   await requireAdmin()
-  const id = (await ctx.params).id
+  const id = (await ctx!.params).id
   const exists = await db.kategori.findUnique({
     where: { idKategori: id },
     include: { _count: { select: { buku: true } } },

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/auth"
 import { apiHandler, fail, ok } from "@/lib/api"
+import type { Prisma } from "@prisma/client"
 
 // GET /api/denda — daftar semua denda (admin), filter ?status=Belum%20Bayar|Sudah%20Bayar
 // Ref: DFD 6.0, Use Case Generate Laporan (denda)
@@ -9,7 +10,7 @@ export const GET = apiHandler(async (req) => {
   const { searchParams } = new URL(req.url)
   const status = searchParams.get("status") || undefined
 
-  const where: any = {}
+  const where: Prisma.DendaWhereInput = {}
   if (status) where.statusPembayaran = status
 
   const list = await db.denda.findMany({

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/auth"
 import { apiHandler, ok } from "@/lib/api"
+import type { Prisma } from "@prisma/client"
 
 // =====================================================
 // /api/laporan/peminjaman — Laporan Peminjaman (terpisah)
@@ -27,7 +28,7 @@ export const GET = apiHandler(async (req) => {
   sampai.setHours(23, 59, 59, 999)
   const status = searchParams.get("status") || undefined
 
-  const where: any = {
+  const where: Prisma.PeminjamanWhereInput = {
     tanggalPinjam: { gte: dari, lte: sampai },
   }
   if (status) where.statusPinjam = status

@@ -2,7 +2,8 @@
 
 // =====================================================
 // API client sisi client — wrapper fetch dengan error handling
-// Menggantikan axios instance pada stack asli
+// Hanya berisi HTTP client. Formatters dipindah ke lib/formatters.ts
+// sehingga bisa diimport tanpa "use client" dari server code.
 // =====================================================
 
 export class ApiError extends Error {
@@ -15,10 +16,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  url: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(url, {
     ...options,
     headers: {
@@ -46,44 +44,11 @@ export const api = {
   del: <T>(url: string) => request<T>(url, { method: "DELETE" }),
 }
 
-// =====================================================
-// Formatter
-// =====================================================
-export function formatRupiah(n: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(n)
-}
-
-export function formatDate(d: string | Date | null | undefined): string {
-  if (!d) return "-"
-  const date = typeof d === "string" ? new Date(d) : d
-  return date.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
-}
-
-export function formatDateTime(d: string | Date | null | undefined): string {
-  if (!d) return "-"
-  const date = typeof d === "string" ? new Date(d) : d
-  return date.toLocaleString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
-export function hariTerlambat(jatuhTempo: string | Date): number {
-  const j = typeof jatuhTempo === "string" ? new Date(jatuhTempo) : jatuhTempo
-  const today = new Date()
-  j.setHours(0, 0, 0, 0)
-  today.setHours(0, 0, 0, 0)
-  const diff = today.getTime() - j.getTime()
-  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
-}
+// Re-export formatters untuk backward compatibility — komponen lama yang
+// sudah import dari api-client tidak perlu diupdate satu per satu
+export {
+  formatRupiah,
+  formatDate,
+  formatDateTime,
+  hariTerlambat,
+} from "@/lib/formatters"

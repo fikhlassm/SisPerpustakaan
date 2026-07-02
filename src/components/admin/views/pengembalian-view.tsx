@@ -249,11 +249,10 @@ function PengembalianCard({
           >
             <div className="flex items-start gap-3 min-w-0">
               <div
-                className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
-                  d.statusKembali === "Sudah"
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : "bg-primary/10 text-primary"
-                }`}
+                className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${d.statusKembali === "Sudah"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "bg-primary/10 text-primary"
+                  }`}
               >
                 {d.statusKembali === "Sudah" ? (
                   <CheckCircle2 className="size-4" />
