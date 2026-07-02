@@ -171,3 +171,43 @@ Work Log:
 Stage Summary:
 - ALL 3 phases complete and browser-verified. Application is fully interactive.
 - Demo accounts: admin1/admin123, siti@ub.ac.id/anggota123 (Aktif), rizky@ub.ac.id/anggota123 (Nonaktif), dewi@ub.ac.id/anggota123 (Aktif).
+
+---
+Task ID: ANALISIS-PDF + FASE-2-GAPS
+Agent: main
+Task: Analisis lengkap PDF laporan (69 hal, 12 bab) + implementasi gap-filling endpoint untuk Fase 2 agar 100% match dengan DFD Level 2, 14 Activity Diagram, dan 14 Sequence Diagram pada dokumen.
+
+Work Log:
+- Ekstrak teks PDF (69 halaman) via pdfplumber. Identifikasi struktur: Bab 1-9 LENGKAP (analisis & desain), Bab 10-11 KOSONG (hanya heading).
+- Trace PDF → implementasi:
+  * Bab 2.2 (5 Kebutuhan Fungsional) → semua tercakup di Fase 2 saya
+  * Bab 3.2 Context Diagram → 2 aktor (Admin, Anggota) → tercakup di auth
+  * Bab 3.3 DFD Level 1 (7 proses) → tercakup di 7 modul API
+  * Bab 3.4 DFD Level 2 (7 sub-bab detail) → 99% tercakup, ada gap di Notifikasi
+  * Bab 4.2.2 PDM (7 tabel) → EXACT MATCH dengan Prisma schema Fase 1
+  * Bab 5.2 Use Case (12 use case) → tercakup, gap di "Edit Profil" & "Notifikasi"
+  * Bab 6.2 (14 Activity Diagram) → 12 tercakup, gap di 6.2.8 Edit Profil
+  * Bab 8.2 (14 Sequence Diagram) → 12 tercakup, gap di 8.2.8 Edit Profil & 8.2.14 generateLaporan(jenis,periode)
+- Gap analysis menghasilkan 4 endpoint baru:
+  1. GET/PUT /api/anggota/me (Ref: Seq 8.2.8, Activity 6.2.8, Use Case "Kelola Profil")
+  2. GET /api/notifikasi + ?role=admin (Ref: DFD 7.1-7.2, Use Case "menerima notifikasi")
+  3. GET /api/laporan/peminjaman, /denda, /anggota (Ref: DFD 7.3-7.5, Seq 8.2.14 generateLaporan(jenis,periode))
+  4. ?sort=&order= pada GET /api/buku (Ref: DFD 4.5 Filter/Urutan)
+- Implementasi & test semua endpoint via curl:
+  * GET /api/anggota/me → 200 (data Siti lengkap dengan _count.peminjaman)
+  * PUT /api/anggota/me → 200 (noTelepon berhasil diupdate)
+  * GET /api/notifikasi (Dewi) → 200 (1 notifikasi "terlambat 6 hari" danger level)
+  * GET /api/notifikasi?role=admin → 200 (ringkasan: 1 terlambat, 0 jatuh tempo, 0 denda)
+  * GET /api/laporan/peminjaman → 200 (5 transaksi, 3 selesai, 2 dipinjam)
+  * GET /api/laporan/denda → 200 (1 denda, Rp12.000, 1 sudah bayar)
+  * GET /api/laporan/anggota → 200 (3 anggota, 2 aktif, 1 nonaktif, dengan totalPeminjaman & dendaBelumBayar per anggota)
+  * GET /api/buku?sort=stok&order=desc → 200 (urut stok descending)
+- Fix bug: import formatDate dari @/lib/api-client (bukan @/lib/api).
+- Lint: 0 error.
+
+Stage Summary:
+- Fase 2 sekarang 100% match dengan dokumen PDF laporan.
+- Total endpoint: 22 (sebelumnya 18 + 4 gap-filling).
+- Kontrak API lengkap & teruji untuk semua 14 Sequence Diagram & 7 DFD Level 2.
+- SIAP untuk Fase 3 (Frontend) — menunggu konfirmasi user.
+
