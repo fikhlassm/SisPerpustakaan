@@ -127,4 +127,96 @@ export type AnggotaView =
   | "status"
   | "riwayat"
   | "denda"
+  | "notifikasi"
   | "profil"
+
+// =====================================================
+// Tipe untuk endpoint gap-filling (Ref: DFD 7.1-7.2, 8.2.8, 8.2.14)
+// =====================================================
+
+// GET /api/notifikasi (Ref: DFD 7.1-7.2)
+export type Notifikasi = {
+  id: string
+  jenis: "jatuh_tempo" | "terlambat" | "denda"
+  judul: string
+  pesan: string
+  idPeminjaman: string
+  tanggalJatuhTempo?: string
+  hariMenujuJatuhTempo?: number
+  totalDenda?: number
+  level: "info" | "warning" | "danger"
+}
+
+// GET /api/notifikasi?role=admin
+export type NotifikasiAdmin = {
+  total: number
+  peminjamanTerlambat: number
+  mendekatiJatuhTempo: number
+  dendaBelumBayar: number
+  items: Array<{
+    idAnggota: string
+    namaAnggota: string
+    idPeminjaman: string
+    jenis: string
+    judul: string
+    level: string
+    tanggalJatuhTempo: string
+  }>
+}
+
+// GET /api/anggota/me (Ref: Seq 8.2.8)
+export type AnggotaProfil = {
+  idAnggota: string
+  namaAnggota: string
+  jenisKelamin: "L" | "P"
+  alamat?: string | null
+  noTelepon?: string | null
+  email: string
+  tanggalDaftar: string
+  statusAnggota: "Aktif" | "Nonaktif"
+  tanggalLahir?: string | null
+  _count?: { peminjaman: number }
+}
+
+// GET /api/laporan/peminjaman, /denda, /anggota (Ref: DFD 7.3-7.5, Seq 8.2.14)
+export type LaporanPeminjaman = {
+  jenis: "peminjaman"
+  periode: { dari: string; sampai: string }
+  ringkasan: {
+    totalTransaksi: number
+    selesai: number
+    dipinjam: number
+    totalBukuDipinjam: number
+  }
+  items: Peminjaman[]
+}
+
+export type LaporanDenda = {
+  jenis: "denda"
+  periode: { dari: string; sampai: string }
+  ringkasan: {
+    totalDenda: number
+    totalNominal: number
+    belumBayar: number
+    nominalBelumBayar: number
+    sudahBayar: number
+    nominalSudahBayar: number
+  }
+  items: Denda[]
+}
+
+export type LaporanAnggotaItem = Anggota & {
+  totalPeminjaman: number
+  dendaBelumBayar: number
+}
+
+export type LaporanAnggota = {
+  jenis: "anggota"
+  periode: { dari: string; sampai: string }
+  ringkasan: {
+    totalAnggota: number
+    aktif: number
+    nonaktif: number
+  }
+  items: LaporanAnggotaItem[]
+}

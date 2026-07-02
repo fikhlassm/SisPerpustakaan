@@ -211,3 +211,111 @@ Stage Summary:
 - Kontrak API lengkap & teruji untuk semua 14 Sequence Diagram & 7 DFD Level 2.
 - SIAP untuk Fase 3 (Frontend) — menunggu konfirmasi user.
 
+
+---
+Task ID: F3-LAPORAN
+Agent: full-stack-developer
+Task: Rewrite LaporanView untuk mengimplementasikan penuh Sequence Diagram 8.2.14 — generateLaporan(jenis, periode). Memakai 3 endpoint laporan detail (/api/laporan/peminjaman, /denda, /anggota) dengan filter jenis + periode (dari/sampai) + status, dipicu tombol Generate.
+
+Work Log:
+- Membaca worklog.md (semua fase 1-3 + gap-filling), src/lib/types.ts (konfirmasi tipe LaporanPeminjaman/Denda/Anggota & LaporanAnggotaItem sudah ada), src/lib/api-client.ts (api/ApiError/formatRupiah/formatDate), src/components/shared/ui-helpers.tsx (StatCard/EmptyState/StatusBadge), src/components/shared/shell-layout.tsx (PageHeader), src/components/ui/tabs.tsx, select.tsx, badge.tsx, separator.tsx untuk verifikasi kontrak komponen shadcn.
+- Rewrite src/components/admin/views/laporan-view.tsx:
+  * Section 1 Ringkasan Umum: TETAP memakai GET /api/laporan, 7 StatCards (BookCopy/Users/UserCheck/History/ArrowRightLeft/CircleDollarSign) grid sm:2 lg:4. Skeleton loading pake useEffect+async load() pattern dengan cleanup `active` flag (hindari react-hooks warning setState after unmount).
+  * Section 2 Statistik Peminjaman per Bulan: recharts BarChart height 280, fill var(--primary), dari data.peminjamanPerBulan.
+  * Section 3 Buku Terpopuler: recharts BarChart layout vertical height 280, dari data.topBuku.
+  * Section 4 NEW "Generate Laporan Detail" (Ref: Seq 8.2.14):
+    - Card dengan header + CardDescription.
+    - Filter row sticky (top-2 z-10 bg-card/95 backdrop-blur border): Tabs untuk jenis (Peminjaman/Denda/Anggota), Separator, grid 4-kolom (sm:2 lg:4): Input date Dari, Input date Sampai, Select Status (options dinamis per jenis), Button Generate (FileBarChart icon, disabled saat generating atau tanggal kosong).
+    - Default: dari = `${tahunIni}-01-01`, sampai = today (lokal YYYY-MM-DD).
+    - Status options: peminjaman→Semua/Dipinjam/Selesai, denda→Semua/Belum Bayar/Sudah Bayar, anggota→Semua/Aktif/Nonaktif.
+    - handleJenisChange & handleStatusChange: reset status ke "Semua" saat jenis ganti, clear hasil+generated flag (UX: user harus klik Generate lagi setelah ganti filter diskrit).
+    - handleGenerate: bangun URLSearchParams(dari, sampai, optional status), GET /api/laporan/{jenis}?..., set hasil & generated=true. Catch dengan ApiError → toast.error(msg).
+    - Result area: jika !generated → EmptyState "Klik Generate untuk menampilkan laporan" (FileBarChart icon); jika generating → skeleton 4 cards + skeleton tabel; jika generated → render sub-komponen sesuai jenis.
+  * Sub-komponen HasilPeminjaman: 4 StatCards (Total Transaksi/Selesai/Dipinjam/Total Buku Dipinjam) + tabel (ID Peminjaman, Anggota nama+email, Buku join judulBuku koma, Tanggal Pinjam formatDate, Jatuh Tempo formatDate, Status StatusBadge). Tabel dibungkus max-h-[32rem] overflow-y-auto rounded-md border, sticky header.
+  * Sub-komponen HasilDenda: 4 StatCards (Total Denda count, Total Nominal formatRupiah, Belum Bayar count+formatRupiah hint danger, Sudah Bayar count+formatRupiah hint success) + tabel (ID Denda DNDxxx, Anggota nama+email, Buku judul, Hari Telat, Total Denda formatRupiah, Status StatusBadge, Tgl Pembayaran formatDate atau "—").
+  * Sub-komponen HasilAnggota: 3 StatCards (Total Anggota/Aktif/Nonaktif) + tabel (ID Anggota, Nama, JK Badge L=default P=secondary, Email, Tgl Daftar formatDate, Status StatusBadge, Total Pinjam Badge secondary, Denda Belum Bayar formatRupiah red jika >0).
+  * Semua tabel: empty fallback EmptyState FileBarChart "Tidak ada data untuk periode & filter ini".
+  * Indonesian UI, emerald theme (var(--primary), emerald/amber/red tones — no indigo/blue), responsive grids, "use client", useEffect+useState (no TanStack Query), import { api, ApiError, formatRupiah, formatDate } from "@/lib/api-client".
+- Lint: `bun run lint` → EXIT=0, 0 error. File laporan-view.tsx bersih.
+- Dev log terkini: "✓ Compiled in 251ms" — kompilasi sukses.
+
+Stage Summary:
+- File dimodifikasi (1): src/components/admin/views/laporan-view.tsx — total rewrite, ekspor `LaporanView` tetap sama.
+- Tidak membuat route/API baru (endpoint sudah ada dari Task ANALISIS-PDF + FASE-2-GAPS). Tidak menulis test. Tidak pakai TanStack Query. Tidak memodifikasi file lain.
+- Keputusan kunci: (1) reset status & clear hasil saat jenis/status diskrit berubah — UX clean, user explicitly re-generate; (2) date change tidak auto-clear agar user bisa adjust range tanpa kehilangan result; (3) helper todayISO/startOfYearISO pakai getDate/getMonth lokal (bukan toISOString yang UTC) agar default date input tidak off-by-one di timezone Asia/Jakarta; (4) filter row sticky di dalam card (top-2) supaya selalu terlihat saat scroll tabel panjang; (5) JK badge L=default (primary) P=secondary — emerald tone, no blue/indigo.
+- Lint passes (EXIT=0). LaporanView siap dipakai admin untuk generate 3 jenis laporan dengan filter periode & status sesuai Seq 8.2.14.
+
+---
+Task ID: F3-KATALOG
+Agent: full-stack-developer
+Task: Menambahkan 2 fitur baru ke KatalogView (Anggota) — (1) Sequence Diagram 8.2.4 "Lihat Detail Buku" via Dialog detail, dan (2) DFD 4.5 "Filter & Pilih Buku Katalog" via dropdown Sort/Urutan. Tidak menghapus fungsionalitas existing (search, kategori filter, book grid, borrow selection, sticky bar, AlertDialog confirm, POST /api/peminjaman).
+
+Work Log:
+- Membaca worklog.md (Tasks 1-17 + ANALISIS-PDF) untuk memahami konvensi: emerald theme, useEffect+useState (no TanStack), PageHeader/EmptyState helpers, signed-cookie session, formatDate/ApiError dari @/lib/api-client, 22 endpoint API termasuk ?sort=&order= pada GET /api/buku.
+- Membaca src/components/anggota/views/katalog-view.tsx yang existing — sudah ada search debounce 300ms, kategori Select, card grid dengan gradient header + checkbox borrow selection + sticky bar + AlertDialog confirm.
+- Konfirmasi GET /api/buku/[id] mengembalikan `buku` dengan relasi `kategori` + `admin: { namaAdmin }`. GET /api/buku mendukung ?sort=judul|pengarang|tahun|stok&order=asc|desc.
+- Konfirmasi komponen UI tersedia: dialog, separator, select, badge, skeleton, checkbox, alert-dialog, alert.
+- Mendefinisikan SortKey union type ("default" + 7 opsi sort) dan SORT_OPTIONS array; parseSort() mengubah SortKey → { sort?, order? }.
+- Mendefinisikan BukuDetail type lokal = Buku & { admin?: { namaAdmin } } karena tipe Buku di @/lib/types tidak include relasi admin.
+- Mendefinisikan InfoRow helper component untuk info grid (icon + label + value) di dalam dialog.
+- State baru: sortKey (SortKey), detailId (string | null), detailBook (BukuDetail | null), detailLoading (boolean), detailError (string | null).
+- useEffect fetch buku dimodifikasi: tambahkan sort&order dari parseSort(sortKey) ke URLSearchParams; tambahkan sortKey ke dependency array.
+- useEffect baru pada detailId: jika non-null, fetch /api/buku/[id] dengan skeleton loading & error handling; cleanup dengan `mounted` flag.
+- UI Sort Select ditambahkan ke filter bar (sebelumnya: search + kategori) — sekarang 3-kolom di sm:, full-width stack di mobile. Trigger menampilkan ikon ArrowUpDown + SelectValue.
+- Card body dimodifikasi: judul + pengarang + penerbit·tahun dibungkus <button> yang membuka dialog (hover:text-primary); grid 2-kolom di bagian bawah dengan [Checkbox "Pilih untuk dipinjam"] | [Button "Detail" variant outline size sm dengan ikon Eye]. Checkbox Label & Detail Button adalah sibling — klik Detail tidak toggle checkbox.
+- Dialog Detail (sm:max-w-2xl): loading skeleton (title + 4 info cards + status bar) → error state → success state. Success state: DialogTitle (judul besar) + DialogDescription (pengarang, penerbit·tahun dengan ikon) → info grid 2-col (Kategori badge, Stok badge emerald/red, ID Buku font-mono, Ditambahkan oleh admin.namaAdmin) → Separator → status block (emerald CheckCircle2 "Tersedia untuk dipinjam" atau red XCircle "Sedang tidak tersedia") → footer "Pinjam Buku Ini" button (jika canBorrowDetail) atau muted note.
+- Logika canBorrowDetail: detailBook ada + stok>0 + !borrowDisabled + !detailAtMax. detailAtMax = selected.length >= MAX_BUKU && !isDetailSelected. Jika buku sudah dipilih, button disabled dengan label "Sudah dipilih" + footer note "Buku ini sudah ada di daftar pinjaman Anda."
+- handlePinjamFromDetail: jika belum dipilih → toggleSelect(detailBook.idBuku, true) + toast.success; selalu setDetailId(null) untuk menutup dialog. Checkbox di grid katalog otomatis tercentang karena state `selected` shared.
+- Existing flow tidak diubah: AlertDialog confirm, POST /api/peminjaman, sticky bar, redirect ke status view setelah sukses.
+- `import * as React from "react"` ditambahkan untuk React.ComponentType di InfoRow helper.
+- Format date: import formatDate dari @/lib/api-client (tidak dipakai di UI final — judul/tahun sudah tampil sebagai string/number — namun di-import sesuai konvensi jika dibutuhkan). Catatan: tahunTerbit adalah number, jadi langsung ditampilkan tanpa formatDate.
+- Lint: `bun run lint` → 0 error. Tidak ada perubahan pada file lain.
+- Dev log: kompilasi sukses ("✓ Compiled in 251ms" / "326ms"), GET /api/buku?sort=stok&order=desc mengembalikan 200 (endpoint sort berfungsi), GET /api/buku 200, GET /api/kategori 200, GET /api/auth/me 200.
+
+Stage Summary:
+- File dimodifikasi (PERSIS 1): src/components/anggota/views/katalog-view.tsx.
+- Fitur 1 (Seq 8.2.4 Lihat Detail Buku): Dialog detail dengan fetch /api/buku/[id], skeleton loading, info grid 2-col (Kategori/Stok/ID/Admin), status block emerald/red, tombol "Pinjam Buku Ini" yang menutup dialog & mencentang buku di grid. Judul card & tombol "Detail" keduanya membuka dialog — interaksi terpisah dari checkbox borrow selection.
+- Fitur 2 (DFD 4.5 Sort/Urutan): Select dropdown dengan 8 opsi (Urutan Bawaan + 7 sort) — sort&order dikirim ke GET /api/buku bersama q & id_kategori. Refetch otomatis saat sortKey berubah.
+- Kontrak API dipatuhi: GET /api/buku?q=&id_kategori=&sort=&order= untuk list+sort, GET /api/buku/[id] untuk detail, GET /api/kategori untuk filter.
+- Konvensi dipatuhi: "use client", Indonesian UI, emerald theme (primary + emerald/amber/red tones, no indigo/blue), useEffect+useState (no TanStack), Card p-5, gap-3/gap-4, responsive (sm:flex-row, grid sm:2 lg:3 xl:4), PageHeader + EmptyState helpers, ApiError handling dengan toast.
+- Existing fitur dipertahankan: search debounce 300ms, kategori filter, max-3 selection, sticky bottom borrow bar, AlertDialog confirm, POST /api/peminjaman, redirect ke status view.
+- Lint: 0 error di seluruh project. Kompilasi dev server sukses tanpa warning.
+
+---
+Task ID: FASE-3-COMPLETION
+Agent: main
+Task: Menyelesaikan Fase 3 (Frontend) agar SEMUA 14 Sequence Diagram pada PDF laporan memiliki alur UI yang berfungsi end-to-end.
+
+Work Log:
+- Update src/lib/types.ts: tambah 'notifikasi' ke AnggotaView + tipe Notifikasi, NotifikasiAdmin, AnggotaProfil, LaporanPeminjaman, LaporanDenda, LaporanAnggota.
+- 8.2.8 Edit Profil: rewrite profil-view.tsx — GET /api/anggota/me (read mode) + PUT /api/anggota/me (edit mode dengan form: nama, email, jenisKelamin, noTelepon, tanggalLahir, alamat, optional password change). Tombol "Edit Profil" di header. Tested: Dewi ubah noTelepon → toast "Profil berhasil diperbarui".
+- DFD 7.1-7.2 Notifikasi: buat notifikasi-view.tsx baru — summary cards (Perlu Tindakan / Mendekati Jatuh Tempo / Total) + list kartu notifikasi (danger/warning/info) dengan ikon per jenis (jatuh_tempo/terlambat/denda). Tested: Dewi lihat notifikasi "PMJ0004 terlambat 6 hari".
+- DFD 7.1-7.2 Bell Notifikasi: update anggota-shell.tsx — tambah bell icon (Popover) di header dengan badge counter + preview 5 notifikasi teratas + auto-refresh setiap 60 detik. Nav "Notifikasi" baru di sidebar. Tested: bell menampilkan badge + preview + tombol "Lihat Semua Notifikasi".
+- 8.2.4 Lihat Detail Buku + DFD 4.5 Sort: (subagent) update katalog-view.tsx — tambah dialog detail buku (fetch GET /api/buku/[id], tampilkan judul/pengarang/penerbit/tahun/kategori/stok/status/ditambahkan oleh, tombol "Pinjam Buku Ini") + dropdown sort (8 opsi: judul/pengarang/tahun/stok × asc/desc). Tested: dialog detail "Rekayasa Perangkat Lunak" tampil dengan stok 6 + sort "Stok Terbanyak" mengurutkan buku dengan benar.
+- 8.2.14 Generate Laporan: (subagent) rewrite laporan-view.tsx — section "Generate Laporan Detail" dengan Tabs jenis (Peminjaman/Denda/Anggota) + date range (dari/sampai) + status Select dinamis per jenis + tombol Generate. Result: StatCards ringkasan + tabel spesifik per jenis. Tested: Generate Peminjaman menampilkan tabel PMJ0005/Siti/Basis Data; Generate Denda menampilkan tabel denda.
+- Lint: 0 error.
+- Agent Browser end-to-end verification (Dewi anggota + Admin):
+  * Seq 8.2.1 Login (admin) ✓
+  * Seq 8.2.2 Daftar (register tab) ✓ (existing)
+  * Seq 8.2.3 Cari Buku (katalog search) ✓ (existing)
+  * Seq 8.2.4 Lihat Detail Buku ✓ NEW — dialog detail dengan info lengkap
+  * Seq 8.2.5 Ajukan Peminjaman ✓ (existing)
+  * Seq 8.2.6 Cek Status Peminjaman ✓ (existing)
+  * Seq 8.2.7 Lihat Riwayat ✓ (existing)
+  * Seq 8.2.8 Edit Profil Anggota ✓ NEW — form edit + save via PUT /api/anggota/me
+  * Seq 8.2.9 Kelola Data Buku ✓ (existing)
+  * Seq 8.2.10 Kelola Peminjaman ✓ (existing)
+  * Seq 8.2.11 Verifikasi Anggota ✓ (existing)
+  * Seq 8.2.12 Kelola Data Anggota ✓ (existing)
+  * Seq 8.2.13 Proses Pengembalian ✓ (existing)
+  * Seq 8.2.14 Generate Laporan ✓ NEW — 3 jenis laporan + filter periode + tombol Generate
+  * DFD 4.5 Filter/Urutan Katalog ✓ NEW — dropdown sort 8 opsi
+  * DFD 7.1-7.2 Notifikasi Jatuh Tempo ✓ NEW — bell + view untuk anggota
+- Sticky footer, responsive, emerald theme, no indigo/blue. No console errors.
+
+Stage Summary:
+- SEMUA 14 Sequence Diagram + DFD 4.5 + DFD 7.1-7.2 sekarang punya alur UI end-to-end yang berfungsi.
+- Fase 1 (DB) + Fase 2 (22 endpoint) + Fase 3 (frontend lengkap) = PROYEK SELESAI sesuai dokumen PDF laporan.
+- Total endpoint: 22. Total view: 8 admin + 6 anggota (sebelumnya 5, +1 Notifikasi).
+- Akun demo tetap: admin1/admin123, siti@ub.ac.id/anggota123, rizky@ub.ac.id/anggota123, dewi@ub.ac.id/anggota123.
+
