@@ -1,6 +1,3 @@
-﻿-- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
-
 -- CreateTable
 CREATE TABLE "Admin" (
     "idAdmin" TEXT NOT NULL,
@@ -146,4 +143,3 @@ ALTER TABLE "DetailPeminjaman" ADD CONSTRAINT "DetailPeminjaman_idBuku_fkey" FOR
 
 -- AddForeignKey
 ALTER TABLE "Denda" ADD CONSTRAINT "Denda_idDetail_fkey" FOREIGN KEY ("idDetail") REFERENCES "DetailPeminjaman"("idDetail") ON DELETE RESTRICT ON UPDATE CASCADE;
-
