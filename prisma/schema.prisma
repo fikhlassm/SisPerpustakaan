@@ -1,0 +1,148 @@
+// =====================================================
+// Sistem Informasi Peminjaman Buku Perpustakaan Berbasis Web
+// Prisma schema (SQLite) — diturunkan dari CDM/PDM Bab 4 laporan APSI
+// Adaptasi dari MySQL DDL pada dokumen Fase 1 (Ref: 1.3)
+//
+// Penyesuaian skema (Ref: 1.2):
+//  1. Circular reference denda <-> detail_peminjaman diputus menjadi satu arah
+//     (hanya denda.id_detail -> detail_peminjaman.id_detail, diberi @unique).
+//  2. Kolom `password` ditambahkan ke tabel anggota (syarat DFD 3.0 Login Anggota).
+// =====================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------
+// 1. admin  (Ref: DFD 3.0, Use Case Login Admin)
+// ---------------------------------------------------
+model Admin {
+  idAdmin    String   @id // format: ADM001
+  username   String   @unique
+  password   String // bcrypt hash
+  namaAdmin  String
+  email      String   @unique
+  noTelepon  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  buku Buku[]
+}
+
+// ---------------------------------------------------
+// 2. kategori  (Ref: DFD 1.0)
+// ---------------------------------------------------
+model Kategori {
+  idKategori   String   @id // format: KTG001
+  namaKategori String
+  deskripsi    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  buku Buku[]
+}
+
+// ---------------------------------------------------
+// 3. anggota  (Ref: DFD 2.0, 3.0) — kolom password = penyesuaian 1.2
+// ---------------------------------------------------
+model Anggota {
+  idAnggota     String   @id // format: AG0001
+  namaAnggota   String
+  jenisKelamin  String // 'L' | 'P'
+  alamat        String?
+  noTelepon     String?
+  email         String   @unique
+  password      String // bcrypt hash (penyesuaian 1.2)
+  tanggalDaftar DateTime
+  statusAnggota String // 'Aktif' | 'Nonaktif'
+  tanggalLahir  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  peminjaman Peminjaman[]
+}
+
+// ---------------------------------------------------
+// 4. buku  (Ref: DFD 1.0, 4.0)
+// ---------------------------------------------------
+model Buku {
+  idBuku     String   @id // format: BK0001
+  idKategori String
+  idAdmin    String
+  judulBuku  String
+  pengarang  String
+  penerbit   String
+  tahunTerbit Int
+  stok       Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  kategori       Kategori       @relation(fields: [idKategori], references: [idKategori])
+  admin          Admin          @relation(fields: [idAdmin], references: [idAdmin])
+  detailPinjam   DetailPeminjaman[]
+
+  @@index([idKategori])
+  @@index([idAdmin])
+}
+
+// ---------------------------------------------------
+// 5. peminjaman  (Ref: DFD 5.0)
+// ---------------------------------------------------
+model Peminjaman {
+  idPeminjaman      String   @id // format: PMJ0001
+  idAnggota         String
+  tanggalPinjam     DateTime
+  tanggalJatuhTempo DateTime
+  statusPinjam      String // 'Dipinjam' | 'Selesai'
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  anggota Anggota            @relation(fields: [idAnggota], references: [idAnggota])
+  detail  DetailPeminjaman[]
+
+  @@index([idAnggota])
+}
+
+// ---------------------------------------------------
+// 6. detail_peminjaman  (Ref: DFD 5.0, 6.0)
+//    kolom id_denda & denda DIHAPUS (penyesuaian 1.2)
+// ---------------------------------------------------
+model DetailPeminjaman {
+  idDetail        String   @id // format: DTL0001
+  idPeminjaman    String
+  idBuku          String
+  tanggalKembali  DateTime?
+  jumlahHariTelat Int      @default(0)
+  statusKembali   String // 'Belum' | 'Sudah'
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  peminjaman Peminjaman @relation(fields: [idPeminjaman], references: [idPeminjaman])
+  buku       Buku       @relation(fields: [idBuku], references: [idBuku])
+  denda      Denda?
+
+  @@index([idPeminjaman])
+  @@index([idBuku])
+}
+
+// ---------------------------------------------------
+// 7. denda  (Ref: DFD 6.0) — relasi satu arah ke detail_peminjaman (penyesuaian 1.2)
+// ---------------------------------------------------
+model Denda {
+  idDenda         Int      @id @default(autoincrement())
+  idDetail        String   @unique
+  jumlahHariTelat Int
+  tarifPerhari    Float
+  totalDenda      Float
+  statusPembayaran String // 'Belum Bayar' | 'Sudah Bayar'
+  tanggalPembayaran DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  detailPeminjaman DetailPeminjaman @relation(fields: [idDetail], references: [idDetail])
+}
